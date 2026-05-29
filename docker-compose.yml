@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: aegisx_admin
+      POSTGRES_PASSWORD: aegisx_password
+      POSTGRES_DB: aegisx_enterprise
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    mem_limit: 2g
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    mem_limit: 2g
+
+  neo4j:
+    image: neo4j:5
+    environment:
+      NEO4J_AUTH: neo4j/aegisx_graph_pass
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474" # HTTP Browser
+      - "7687:7687" # Bolt connection
+    volumes:
+      - neo4j_data:/data
+    restart: unless-stopped
+    mem_limit: 2g
+
+volumes:
+  postgres_data:
+  redis_data:
+  neo4j_data:

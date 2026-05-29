@@ -1,0 +1,9 @@
+venv/
+.env
+.aegisx_creds.json
+.aegisx_session
+.chroma/
+__pycache__/
+*.pyc
+*.pyo
+reports/

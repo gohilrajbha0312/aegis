@@ -1,0 +1,17 @@
+[
+  {"vendor": "Synology", "product": "DSM", "default_user": "admin", "default_pass": "(empty)", "note": "Setup wizard prompts new password"},
+  {"vendor": "Synology", "product": "DSM", "default_user": "admin", "default_pass": "admin"},
+  {"vendor": "Synology", "product": "DSM", "default_user": "admin", "default_pass": "123456"},
+  {"vendor": "QNAP", "product": "QTS", "default_user": "admin", "default_pass": "admin"},
+  {"vendor": "QSAN", "product": "NAS", "default_user": "admin", "default_pass": "admin"},
+  {"vendor": "Netgear", "product": "ReadyNAS", "default_user": "admin", "default_pass": "password"},
+  {"vendor": "Netgear", "product": "ReadyNAS", "default_user": "admin", "default_pass": "netgear1"},
+  {"vendor": "Western Digital", "product": "My Cloud", "default_user": "admin", "default_pass": "(set during setup)"},
+  {"vendor": "Western Digital", "product": "My Cloud", "default_user": "admin", "default_pass": "admin"},
+  {"vendor": "Buffalo", "product": "LinkStation", "default_user": "admin", "default_pass": "password"},
+  {"vendor": "Buffalo", "product": "TeraStation", "default_user": "admin", "default_pass": "password"},
+  {"vendor": "Thecus", "product": "NAS", "default_user": "admin", "default_pass": "admin"},
+  {"vendor": "Asustor", "product": "ADM", "default_user": "admin", "default_pass": "admin"},
+  {"vendor": "Zyxel", "product": "NAS", "default_user": "admin", "default_pass": "1234"},
+  {"vendor": "Drobo", "product": "NAS", "default_user": "admin", "default_pass": "(empty)"}
+]
