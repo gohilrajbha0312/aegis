@@ -97,7 +97,42 @@ class AIOperationsOrchestrator:
             "DifferentialAccessAgent": self._differential_access_wrapper,
             "OwnershipValidationAgent": self._differential_access_wrapper, # Temporarily share the differential wrapper for both
             "ApplicationFlowIntelligenceAgent": phase_12b_web_vuln_suite,
+            "ResponseClusteringAgent": self._response_clustering_wrapper,
+            "StateTransitionAnalyzer": self._state_transition_wrapper,
+            "AttackGraphIntelligenceAgent": self._attack_graph_wrapper,
+            "LoginDetectionAgent": self._login_detection_wrapper,
         }
+        
+    def _login_detection_wrapper(self, state: WorkflowState) -> WorkflowState:
+        from aegisx.agents.login_detection import LoginDetectionAgent
+        import asyncio
+        agent = LoginDetectionAgent()
+        try:
+            state_dict = state.model_dump()
+            new_state = asyncio.run(agent.process(state_dict))
+            state.sessions = new_state.get("sessions", state.sessions)
+            state.roles = new_state.get("roles", state.roles)
+            state.authenticated_routes = new_state.get("authenticated_routes", state.authenticated_routes)
+            state.routes = new_state.get("routes", state.routes)
+        except Exception as e:
+            ConsoleUI.warning(f"Login Detection skipped: {e}")
+        return state
+        
+    def validate_registry(self, state: WorkflowState) -> WorkflowState:
+        """Validates all agents in registry before execution pool."""
+        ConsoleUI.info("Validating Agent Registry...")
+        unavailable = []
+        for name, func in self.registry.items():
+            if not callable(func):
+                ConsoleUI.warning(f"Agent '{name}' is not callable. Marking unavailable.")
+                unavailable.append(name)
+        
+        state.unavailable_agents = unavailable
+        if unavailable:
+            ConsoleUI.warning(f"Removed {len(unavailable)} broken agents from scheduling pool.")
+        else:
+            ConsoleUI.success("All registered agents are valid and available.")
+        return state
         
     def _resolve_agent(self, action: str):
         """Attempts to match an AI's string output to an actual agent in the registry."""
@@ -171,15 +206,52 @@ class AIOperationsOrchestrator:
 
     def _differential_access_wrapper(self, state: WorkflowState) -> WorkflowState:
         from aegisx.agents.differential_access import DifferentialAccessAgent
+        import asyncio
         ConsoleUI.header("AI Differential Access Validation")
         agent = DifferentialAccessAgent()
         try:
             # PydanticAI/LangGraph state dictionary adaptation
             state_dict = {"routes": state.routes, "findings": state.findings, "target": state.target}
-            new_state = agent.run(state_dict)
+            new_state = asyncio.run(agent.process(state_dict))
             state.findings = new_state.get("findings", state.findings)
         except Exception as e:
             ConsoleUI.warning(f"Differential Access skipped: {e}")
+        return state
+
+    def _response_clustering_wrapper(self, state: WorkflowState) -> WorkflowState:
+        from aegisx.agents.response_clustering import ResponseClusteringAgent
+        import asyncio
+        agent = ResponseClusteringAgent()
+        try:
+            state_dict = {"routes": state.routes, "findings": state.findings, "evidence_ledger": state.evidence_ledger}
+            new_state = asyncio.run(agent.process(state_dict))
+            state.evidence_ledger = new_state.get("evidence_ledger", state.evidence_ledger)
+        except Exception as e:
+            ConsoleUI.warning(f"Response Clustering skipped: {e}")
+        return state
+
+    def _state_transition_wrapper(self, state: WorkflowState) -> WorkflowState:
+        from aegisx.agents.state_transition import StateTransitionAnalyzer
+        import asyncio
+        agent = StateTransitionAnalyzer()
+        try:
+            state_dict = {"routes": state.routes, "findings": state.findings}
+            new_state = asyncio.run(agent.process(state_dict))
+            state.findings = new_state.get("findings", state.findings)
+        except Exception as e:
+            ConsoleUI.warning(f"State Transition Analysis skipped: {e}")
+        return state
+
+    def _attack_graph_wrapper(self, state: WorkflowState) -> WorkflowState:
+        from aegisx.agents.attack_graph_agent import AttackGraphIntelligenceAgent
+        import asyncio
+        agent = AttackGraphIntelligenceAgent()
+        try:
+            state_dict = state.model_dump()
+            new_state = asyncio.run(agent.process(state_dict))
+            state.graph_mutation = new_state.get("graph_mutation")
+        except Exception as e:
+            ConsoleUI.warning(f"Attack Graph Intelligence skipped: {e}")
         return state
 
     def _phase_11_governance_wrapper(self, state: WorkflowState) -> WorkflowState:
@@ -316,6 +388,9 @@ class AIOperationsOrchestrator:
         # Force initial normalization
         state = stage_1_normalization(state)
         
+        # Pre-execution validation
+        state = self.validate_registry(state)
+        
         commander = CommanderAgent()
         import time
         start_time = time.time()
@@ -327,6 +402,8 @@ class AIOperationsOrchestrator:
         # State tracking for Methodology Pivot Engine
         phase_history = []
         last_findings_count = len(state.findings)
+        last_evidence_count = len(state.evidence_ledger)
+        last_route_count = len(state.discovered_routes) + len(state.routes)
         
         while iteration < max_iterations and not is_complete:
             iteration += 1
@@ -361,18 +438,26 @@ class AIOperationsOrchestrator:
                 ConsoleUI.success(f"[AI Phase] {workflow_phase}")
                 ConsoleUI.success(f"[AI Commander] Reasoning: {reasoning}")
                 
-                # ── Methodology Pivot Engine ──
+                # ── Methodology Pivot Engine & Agent Scoring ──
                 current_findings_count = len(state.findings)
+                current_evidence_count = len(state.evidence_ledger)
+                current_route_count = len(state.discovered_routes) + len(state.routes)
+                
                 findings_gained = current_findings_count - last_findings_count
+                evidence_gained = current_evidence_count - last_evidence_count
+                routes_gained = current_route_count - last_route_count
+                
                 last_findings_count = current_findings_count
+                last_evidence_count = current_evidence_count
+                last_route_count = current_route_count
                 
                 phase_history.append(workflow_phase)
-                # If we've been in the same phase for 3 iterations with no new findings, force pivot
+                # If we've been in the same phase for 3 iterations with no new findings or evidence, force pivot
                 if len(phase_history) >= 3 and all(p == workflow_phase for p in phase_history[-3:]):
-                    if findings_gained == 0 and not methodology_pivot:
-                        ConsoleUI.warning(f"Stall Detected: 3 iterations in {workflow_phase} with 0 new findings.")
+                    if findings_gained == 0 and evidence_gained == 0 and not methodology_pivot:
+                        ConsoleUI.warning(f"Stall Detected: 3 iterations in {workflow_phase} with 0 new evidence/findings.")
                         ConsoleUI.warning("Forcing Methodology Pivot...")
-                        methodology_pivot = "AUTO-PIVOT: Previous methodology yielded no results. Exploring new attack surface paths."
+                        methodology_pivot = "AUTO-PIVOT: Previous methodology yielded no results. Analyze attack graph for unexplored nodes and select a new methodology."
                         phase_history.clear() # Reset pivot tracker
                 
                 if methodology_pivot:
@@ -397,6 +482,10 @@ class AIOperationsOrchestrator:
                         
                     # ── Duplicate Action Prevention ──
                     if action in state.completed_agents[-3:] and not methodology_pivot:
+                        state.repeated_results_counter[action] = state.repeated_results_counter.get(action, 0) + 1
+                        if state.repeated_results_counter[action] > 2:
+                            ConsoleUI.warning(f"Duplicate Action Prevention: Skipping '{action}' (repeated > 2 times, penalizing).")
+                            continue
                         ConsoleUI.warning(f"Duplicate Action Prevention: Skipping '{action}' (recently executed, no pivot declared).")
                         continue
                         
@@ -408,6 +497,32 @@ class AIOperationsOrchestrator:
                             executed_this_loop.add(action)
                             state.completed_agents.append(action)
                             state.execution_history.append(action)
+                            
+                            # Agent Effectiveness Scoring for single execution
+                            _post_findings = len(state.findings)
+                            _post_evidence = len(state.evidence_ledger)
+                            _post_routes = len(state.discovered_routes) + len(state.routes)
+                            
+                            _f_gain = _post_findings - current_findings_count
+                            _e_gain = _post_evidence - current_evidence_count
+                            _r_gain = _post_routes - current_route_count
+                            
+                            agent_score = _f_gain + _e_gain + _r_gain
+                            state.agent_scores[action] = state.agent_scores.get(action, 0.0) + agent_score
+                            
+                            if agent_score == 0:
+                                state.repeated_results_counter[action] = state.repeated_results_counter.get(action, 0) + 1
+                                if state.repeated_results_counter[action] >= 3 and action not in state.unavailable_agents:
+                                    ConsoleUI.warning(f"Agent '{action}' yielded 0 value for 3 iterations. Disabling temporarily.")
+                                    state.unavailable_agents.append(action)
+                            else:
+                                state.repeated_results_counter[action] = 0
+                                
+                            # Update currents for next agent in this loop
+                            current_findings_count = _post_findings
+                            current_evidence_count = _post_evidence
+                            current_route_count = _post_routes
+                            
                         except Exception as e:
                             ConsoleUI.error(f"Error executing {action}: {e}")
                     else:
@@ -420,6 +535,35 @@ class AIOperationsOrchestrator:
                 state.halt_execution = True
                 state.halt_reason = str(e)
                 break
+                
+                if state.halt_reason:
+                    break
+                    
+            # ── Correlate Evidence ──
+            try:
+                from aegisx.core.analysis.evidence_correlation import EvidenceCorrelationEngine
+                state_dict = state.model_dump()
+                state_dict = EvidenceCorrelationEngine.correlate(state_dict)
+                state.findings = state_dict.get("findings", state.findings)
+                state.consensus_scores = state_dict.get("consensus_scores", state.confidence_scores)
+            except Exception as e:
+                ConsoleUI.warning(f"Evidence Correlation failed: {e}")
+                
+            # ── AI Graph Learning ──
+            try:
+                if hasattr(state, "graph_mutation") and state.graph_mutation:
+                    from aegisx.core.analysis.graph_learning import GraphLearningEngine
+                    state_dict = state.model_dump()
+                    state_dict = GraphLearningEngine.apply_learning(state_dict)
+                    
+                    state.serialized_graph = state_dict.get("serialized_graph", state.serialized_graph)
+                    state.graph_memory = state_dict.get("graph_memory", state.graph_memory)
+                    state.attack_paths = state_dict.get("attack_paths", state.attack_paths)
+                    
+                    # Clean up mutation so it doesn't leak to next iteration
+                    state.graph_mutation = None
+            except Exception as e:
+                ConsoleUI.warning(f"Graph Learning failed: {e}")
                 
             if state.halt_execution:
                 break

@@ -67,6 +67,17 @@ class ValidationAgent(BaseAgent):
         self.model_override = model_override
         
     async def process(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        routes = state.get("routes", [])
+        parameters = state.get("parameters", [])
+        
+        if len(routes) == 0:
+            ConsoleUI.warning("ValidationAgent skipped: No routes discovered (evidence_count=0).")
+            return state
+            
+        if len(parameters) == 0:
+            ConsoleUI.warning("ValidationAgent skipped: No parameters discovered (evidence_count=0).")
+            return state
+            
         findings = state.get("findings", [])
         if not findings:
             return state

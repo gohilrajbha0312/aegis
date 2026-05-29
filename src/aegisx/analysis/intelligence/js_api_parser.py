@@ -108,10 +108,22 @@ def phase_7_js_intelligence(state: WorkflowState) -> WorkflowState:
     
     # Populate state with discovered JS routes
     for ep in all_endpoints:
-        if ep.startswith("/") and ep not in state.discovered_js_routes:
-            state.discovered_js_routes.append(ep)
-        if ep.startswith("/") and ep not in state.routes:
-            state.routes.append(ep)
+        if ep.startswith("/"):
+            if ep not in state.discovered_js_routes:
+                state.discovered_js_routes.append(ep)
+            # Add to rich metadata routes
+            route_exists = any(r.get("path") == ep for r in state.routes)
+            if not route_exists:
+                route_obj = {
+                    "path": ep,
+                    "method": "GET",
+                    "source": "JS_AST_Analysis",
+                    "confidence": 0.8,
+                    "timestamp": time.time(),
+                    "auth_required": False
+                }
+                state.routes.append(route_obj)
+                state.discovered_routes.append(route_obj)
     
     ConsoleUI.success(f"JS AST Analysis complete. Discovered {len(all_endpoints)} hidden endpoints.")
     if all_secrets:
@@ -140,6 +152,33 @@ def phase_8_api_boundary(state: WorkflowState) -> WorkflowState:
     
     if res["graphql_detected"]:
         ConsoleUI.warning("GraphQL Endpoint detected. Schema introspection may be possible.")
+        route_exists = any(r.get("path") == "/graphql" for r in state.routes)
+        if not route_exists:
+            route_obj = {
+                "path": "/graphql",
+                "method": "POST",
+                "source": "APISurface_Mapper",
+                "confidence": 0.9,
+                "timestamp": time.time(),
+                "auth_required": False
+            }
+            state.routes.append(route_obj)
+            state.discovered_routes.append(route_obj)
+            
+    if res["swagger_detected"]:
+        route_exists = any(r.get("path") == "/swagger/v1/swagger.json" for r in state.routes)
+        if not route_exists:
+            route_obj = {
+                "path": "/swagger/v1/swagger.json",
+                "method": "GET",
+                "source": "APISurface_Mapper",
+                "confidence": 0.9,
+                "timestamp": time.time(),
+                "auth_required": False
+            }
+            state.routes.append(route_obj)
+            state.discovered_routes.append(route_obj)
+            
     if res["shadow_apis"]:
         ConsoleUI.warning(f"Shadow/Legacy APIs discovered: {', '.join(res['shadow_apis'])}")
         

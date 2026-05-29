@@ -66,10 +66,22 @@ available_agents_text = (
     "'DataExposureReasoningSkill', 'ErrorAnalysisReasoningSkill'.\n"
     "LOW-NOISE AGENTS (Preferred): 'ReconAgent', 'TrafficAnalyzerAgent', 'JSIntelligenceAgent', "
     "'APISurfaceAgent', 'SemanticDiscoveryAgent', 'AdaptiveValidationEngine', "
-    "'AuthAnalyzerAgent', 'ValidationAgent'.\n"
+    "'AuthAnalyzerAgent', 'ValidationAgent', 'LoginDetectionAgent', 'AttackGraphIntelligenceAgent'.\n"
     "MEDIUM-NOISE (evidence required): 'WebCrawlerAgent', 'ActiveScanner', 'ExploitationAgent', 'ReportingAgent'.\n"
     "HIGH-NOISE (disabled unless DEEP_ANALYSIS): 'FuzzingAgent', 'HydraAdapter'.\n"
-    "NEVER schedule high-noise agents without prior low-noise evidence."
+    "NEVER schedule high-noise agents without prior low-noise evidence.\n\n"
+    "EXECUTION PRIORITIZATION (STRICT):\n"
+    "1. Evidence Collection\n"
+    "2. Authentication Discovery (LoginDetectionAgent)\n"
+    "3. Authenticated Crawling\n"
+    "4. Route & Parameter Discovery\n"
+    "5. Attack Graph Construction (AttackGraphIntelligenceAgent)\n"
+    "6. AI Reasoning\n"
+    "7. Validation\n"
+    "8. Correlation\n"
+    "9. Reporting\n\n"
+    "EVIDENCE MANDATE: Do NOT generate hypotheses if there is no supporting evidence in the SAFE_STATE_SUMMARY. "
+    "If evidence_count == 0 (no routes, params, or sessions discovered), DO NOT schedule validation or reasoning agents. Instead, schedule Evidence Collection agents."
 )
 
 prompt_1 = master_prompt + "\n\nYOUR ROLE: RECONNAISSANCE & ROUTING EXPERT.\nYou specialize in scheduling ReconAgent, JSIntelligenceAgent, and APISurfaceAgent.\n" + available_agents_text
@@ -77,7 +89,7 @@ provider_1 = OpenAIProvider(
     base_url='https://openrouter.ai/api/v1',
     api_key=os.getenv("OPENROUTER_API_KEY", "dummy")
 )
-model_1 = OpenAIModel('meta-llama/llama-3.1-8b-instruct', provider=provider_1)
+model_1 = OpenAIModel('openai/gpt-oss-120b:free', provider=provider_1)
 ai_1 = Agent(model_1, output_type=DynamicPipeline, system_prompt=prompt_1)
 
 prompt_2 = master_prompt + "\n\nYOUR ROLE: VULNERABILITY DISCOVERY EXPERT.\nYou specialize in AI traffic manipulation and logic flaws. You MUST actively schedule TrafficAnalyzerAgent and SurgicalMutationAgent to hunt for Business Logic, XSS, and SQLi flaws.\n" + available_agents_text
@@ -85,7 +97,7 @@ provider_2 = OpenAIProvider(
     base_url='https://openrouter.ai/api/v1',
     api_key=os.getenv("OPENROUTER_API_KEY_2", "dummy")
 )
-model_2 = OpenAIModel('google/gemini-2.0-pro-exp-02-05:free', provider=provider_2)
+model_2 = OpenAIModel('deepseek/deepseek-v4-flash:free', provider=provider_2)
 ai_2 = Agent(model_2, output_type=DynamicPipeline, system_prompt=prompt_2)
 
 prompt_3 = master_prompt + "\n\nYOUR ROLE: VALIDATION & AUTHENTICATION EXPERT.\nYou specialize in reasoning skills and validation. Focus on AuthAnalyzerAgent and Reasoning Skills.\n" + available_agents_text
@@ -146,15 +158,23 @@ class CommanderAgent(BaseAgent):
             "open_ports": state.get("open_ports", []),
             "frameworks": state.get("frameworks", []),
             "recent_routes": routes[-20:] if len(routes) > 20 else routes,
+            "sessions": state.get("sessions", []),
+            "roles": state.get("roles", []),
+            "parameters": state.get("parameters", [])[-20:] if len(state.get("parameters", [])) > 20 else state.get("parameters", []),
+            "forms": state.get("forms", [])[-10:] if len(state.get("forms", [])) > 10 else state.get("forms", []),
             "failed_methods": failed_methods[-5:] if len(failed_methods) > 5 else failed_methods,
             "successful_methods": successful_methods[-5:] if len(successful_methods) > 5 else successful_methods,
             "next_candidate_actions": state.get("next_candidate_actions", []),
-            "workflow_depth": state.get("workflow_depth", 0)
+            "workflow_depth": state.get("workflow_depth", 0),
+            "unavailable_agents": state.get("unavailable_agents", []),
+            "repeated_results_counter": state.get("repeated_results_counter", {}),
+            "attack_surface_nodes": state.get("attack_surface_nodes", [])[-20:],
+            "attack_paths": state.get("attack_paths", [])[-10:]
         }
         
         prompt += "SAFE_STATE_SUMMARY (Compressed Context):\n"
         prompt += json.dumps(safe_state, indent=2)
-        prompt += "\n\n"
+        prompt += "\n\nCRITICAL DIRECTIVE: DO NOT schedule agents listed in 'unavailable_agents'. Penalize agents in 'repeated_results_counter' if their count is high. Pivot methodology if stuck.\n\n"
             
         from aegisx.core.ui.console import ConsoleUI
         
@@ -168,15 +188,17 @@ class CommanderAgent(BaseAgent):
         
         for attempt in range(max_retries):
             # Wrap all 3 AI calls in asyncio tasks
-            # Wait for all of them up to 45 seconds using gather
+            # Wait for all of them up to 60 seconds using gather
             self.log_action("multi_ai_consensus_started", {
-                "models": ["llama-3.1-8b (Recon)", "deepseek-v4-flash (Vuln)", "gpt-oss-120b (Auth)"], 
+                "models": ["gpt-oss-120b (Recon)", "deepseek-v4-flash (Vuln)", "llama-3.3-70b (Auth)"], 
                 "attempt": attempt + 1
             })
             
             try:
                 task_1 = asyncio.create_task(ai_1.run(prompt))
+                await asyncio.sleep(1)
                 task_2 = asyncio.create_task(ai_2.run(prompt))
+                await asyncio.sleep(1)
                 task_3 = asyncio.create_task(ai_3.run(prompt))
                 
                 results = await asyncio.wait_for(

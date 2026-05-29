@@ -91,12 +91,48 @@ def phase_4_http_intelligence(state: WorkflowState) -> WorkflowState:
                             elif "session" in cookie_name.lower() or "sid" in cookie_name.lower():
                                 if "Session" not in state.authentication_methods:
                                     state.authentication_methods.append("Session")
+                    elif key == "location":
+                        loc = val.strip()
+                        if loc.startswith("/"):
+                            path = loc
+                        elif not loc.startswith("http"):
+                            path = "/" + loc
+                        else:
+                            from urllib.parse import urlparse
+                            path = urlparse(loc).path
+                            if not path: path = "/"
+                            
+                        route_exists = any(r.get("path") == path for r in state.routes)
+                        if not route_exists:
+                            route_obj = {
+                                "path": path,
+                                "source": "HTTP_Redirect",
+                                "confidence": 1.0,
+                                "timestamp": time.time(),
+                                "method": "GET",
+                                "auth_required": False
+                            }
+                            state.routes.append(route_obj)
+                            state.discovered_routes.append(route_obj)
+                            ConsoleUI.success(f"  [Route] Discovered via Location header: {path}")
                     elif key == "x-frame-options":
                         state.discovered_headers["security:x-frame-options"] = val
                     elif key == "content-security-policy":
                         state.discovered_headers["security:csp"] = val
             
-            # Mark this path as explored
+            # Ensure the base route "/" is in the discovered routes so agents have a starting point
+            route_exists = any(r.get("path") == "/" for r in state.routes)
+            if not route_exists:
+                route_obj = {
+                    "path": "/",
+                    "source": "HTTP_Root",
+                    "confidence": 1.0,
+                    "timestamp": time.time(),
+                    "method": "GET",
+                    "auth_required": False
+                }
+                state.routes.append(route_obj)
+                state.discovered_routes.append(route_obj)
             if "http_header_analysis" not in state.explored_paths:
                 state.explored_paths.append("http_header_analysis")
         

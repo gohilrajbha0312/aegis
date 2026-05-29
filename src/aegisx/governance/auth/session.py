@@ -118,3 +118,21 @@ class AuthSessionManager:
                 
         print("\n[FATAL] Maximum authentication attempts reached.")
         exit(1)
+
+class TargetSessionManager:
+    """Manages sessions for the target application (multi-context testing)."""
+    
+    def __init__(self):
+        self.sessions = {
+            "guest": {"headers": {}, "cookies": {}},
+            "user": {"headers": {"Authorization": "Bearer mock_user_token"}, "cookies": {"session": "user_123"}},
+            "admin": {"headers": {"Authorization": "Bearer mock_admin_token"}, "cookies": {"session": "admin_999"}}
+        }
+
+    def register_session(self, role: str, headers: dict = None, cookies: dict = None):
+        if headers is None: headers = {}
+        if cookies is None: cookies = {}
+        self.sessions[role.lower()] = {"headers": headers, "cookies": cookies}
+
+    def get_session(self, role: str) -> dict:
+        return self.sessions.get(role.lower(), {"headers": {}, "cookies": {}})

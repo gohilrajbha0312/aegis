@@ -23,6 +23,7 @@ class WorkflowState(BaseModel):
     running_tasks: List[str] = Field(default_factory=list)
     failed_tasks: List[str] = Field(default_factory=list)
     executed_commands: List[str] = Field(default_factory=list)
+    unavailable_agents: List[str] = Field(default_factory=list)
     
     open_ports: List[int] = Field(default_factory=list)
     detected_services: List[str] = Field(default_factory=list)
@@ -30,18 +31,29 @@ class WorkflowState(BaseModel):
     frameworks: List[str] = Field(default_factory=list)
     authentication_methods: List[str] = Field(default_factory=list)
     
-    routes: List[str] = Field(default_factory=list)
+    routes: List[Dict[str, Any]] = Field(default_factory=list)
     api_endpoints: List[str] = Field(default_factory=list)
-    parameters: List[str] = Field(default_factory=list)
+    parameters: List[Dict[str, Any]] = Field(default_factory=list)
+    
+    sessions: List[Dict[str, Any]] = Field(default_factory=list)
+    roles: List[str] = Field(default_factory=list)
+    authenticated_routes: List[str] = Field(default_factory=list)
+    hypotheses: List[Dict[str, Any]] = Field(default_factory=list)
+    forms: List[Dict[str, Any]] = Field(default_factory=list)
     
     validated_findings: List[Dict[str, Any]] = Field(default_factory=list)
     
     attack_surface_nodes: List[Dict[str, Any]] = Field(default_factory=list)
-    attack_paths: List[str] = Field(default_factory=list)
+    attack_paths: List[List[str]] = Field(default_factory=list)
     explored_paths: List[str] = Field(default_factory=list)
     unexplored_paths: List[str] = Field(default_factory=list)
     
+    serialized_graph: Dict[str, Any] = Field(default_factory=dict)
+    graph_memory: Dict[str, Any] = Field(default_factory=dict)
+    
     confidence_scores: Dict[str, float] = Field(default_factory=dict)
+    consensus_scores: Dict[str, float] = Field(default_factory=dict)
+    agent_scores: Dict[str, float] = Field(default_factory=dict)
     risk_scores: Dict[str, float] = Field(default_factory=dict)
     failed_methods: List[str] = Field(default_factory=list)
     successful_methods: List[str] = Field(default_factory=list)
@@ -54,6 +66,7 @@ class WorkflowState(BaseModel):
     discovered_headers: Dict[str, str] = Field(default_factory=dict)
     extracted_tokens: List[str] = Field(default_factory=list)
     discovered_js_routes: List[str] = Field(default_factory=list)
+    discovered_routes: List[Dict[str, Any]] = Field(default_factory=list)
     discovered_cookies: List[str] = Field(default_factory=list)
     session_behaviors: List[str] = Field(default_factory=list)
     technology_fingerprints: Dict[str, float] = Field(default_factory=dict)
