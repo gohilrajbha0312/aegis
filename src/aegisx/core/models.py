@@ -7,8 +7,8 @@ from pydantic_ai.providers.openai import OpenAIProvider
 def get_default_model():
     openrouter_provider = OpenAIProvider(
         base_url='https://openrouter.ai/api/v1',
-        api_key=os.getenv("OPENROUTER_API_KEY_2", "dummy")
+        api_key=os.getenv("OPENROUTER_API_KEY", "dummy")
     )
-    return OpenAIModel('deepseek/deepseek-v4-flash:free', provider=openrouter_provider)
+    return OpenAIModel(os.getenv('AEGIS_MODEL', 'openrouter/free'), provider=openrouter_provider)
 
 default_model = get_default_model()

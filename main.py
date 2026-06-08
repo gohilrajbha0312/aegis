@@ -1,5 +1,10 @@
 import argparse
 import sys
+import os
+from dotenv import load_dotenv
+
+# Load environment variables FIRST before any aegisx imports
+load_dotenv()
 
 from aegisx.core.config import ConfigManager
 from aegisx.governance.auth.session import AuthSessionManager

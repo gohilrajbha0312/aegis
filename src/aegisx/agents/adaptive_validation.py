@@ -20,7 +20,7 @@ if env_path.exists():
             if line and not line.startswith('#'):
                 k, v = line.split('=', 1)
                 os.environ[k] = v
-                if k == 'OPENROUTER_API_KEY_2':
+                if k == 'OPENROUTER_API_KEY':
                     os.environ['GOOGLE_API_KEY'] = v
 
 class ValidationAction(BaseModel):

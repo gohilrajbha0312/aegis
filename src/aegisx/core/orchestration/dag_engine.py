@@ -71,10 +71,66 @@ class WorkflowState(BaseModel):
     session_behaviors: List[str] = Field(default_factory=list)
     technology_fingerprints: Dict[str, float] = Field(default_factory=dict)
 
+    # ── Enterprise Recon Intelligence Fields ────────────────────────
+    auth_surface: List[Dict[str, Any]] = Field(default_factory=list)
+    authorization_matrix: List[Dict[str, Any]] = Field(default_factory=list)
+    js_routes: List[Dict[str, Any]] = Field(default_factory=list)
+    hidden_endpoints: List[str] = Field(default_factory=list)
+    openapi_inventory: List[Dict[str, Any]] = Field(default_factory=list)
+    graphql_inventory: List[Dict[str, Any]] = Field(default_factory=list)
+    hidden_assets: List[Dict[str, Any]] = Field(default_factory=list)
+    security_headers: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    state_transitions: List[Dict[str, Any]] = Field(default_factory=list)
+    business_flows: List[Dict[str, Any]] = Field(default_factory=list)
+    api_inventory: List[Dict[str, Any]] = Field(default_factory=list)
+    recon_score: float = 0.0
+    recon_complete: bool = False
+
     # ── Runtime Governance Fields ────────────────────────────────────
     scan_mode: str = "adaptive"
+    
+    # ── Enterprise Intelligence & Governance (Skills 86-115) ────────
+    agent_health: Dict[str, Any] = Field(default_factory=dict)
+    evidence_graph: Dict[str, Any] = Field(default_factory=dict)
+    session_fingerprints: Dict[str, Any] = Field(default_factory=dict)
+    api_behavior_map: Dict[str, Any] = Field(default_factory=dict)
+    route_risk_score: Dict[str, Any] = Field(default_factory=dict)
+    route_lineage: Dict[str, Any] = Field(default_factory=dict)
+    parameter_lineage: Dict[str, Any] = Field(default_factory=dict)
+    discovery_confidence: Dict[str, Any] = Field(default_factory=dict)
+    last_surface_size: int = 0
+    attack_surface_growth_score: int = 0
+    prioritized_targets: List[str] = Field(default_factory=list)
+    runtime_anomalies: List[Dict[str, Any]] = Field(default_factory=list)
+    response_fingerprints: Dict[str, Any] = Field(default_factory=dict)
+    cross_session_matrix: Dict[str, Any] = Field(default_factory=dict)
+    evidence_chain: Dict[str, Any] = Field(default_factory=dict)
+    force_expansion: bool = False
+    recon_expansion_score: float = 0.0
     workflow_depth: int = 0
     max_workflow_depth: int = 5
+
+    # ── Autonomous Runtime Intelligence (Skills 116-130) ────────────
+    target_priority_scores: Dict[str, float] = Field(default_factory=dict)
+    evidence_states: Dict[str, str] = Field(default_factory=dict)
+    route_clusters: Dict[str, List[str]] = Field(default_factory=dict)
+    parameter_relationship_graph: Dict[str, Any] = Field(default_factory=dict)
+    session_trust_score: Dict[str, float] = Field(default_factory=dict)
+    validation_success_rate: Dict[str, float] = Field(default_factory=dict)
+    recon_intelligence_score: float = 0.0
+    attack_path_scores: Dict[str, float] = Field(default_factory=dict)
+    campaign_memory: Dict[str, Any] = Field(default_factory=dict)
+    enterprise_audit_log: List[Dict[str, Any]] = Field(default_factory=list)
+
+    # ── Autonomous Campaign Management (Skills 131-145) ─────────────
+    campaign_strategy: str = "RECON_FOCUSED"
+    ai_utilization_score: float = 100.0
+    recon_depth_score: float = 0.0
+    validation_queue: List[Dict[str, Any]] = Field(default_factory=list)
+    session_behavior_evidence: List[Dict[str, Any]] = Field(default_factory=list)
+    ownership_baseline_evidence: Dict[str, Any] = Field(default_factory=dict)
+    runtime_learning_base: Dict[str, Any] = Field(default_factory=dict)
+    enterprise_metrics: Dict[str, Any] = Field(default_factory=dict)
 
     # ── Bounded Collections ─────────────────────────────────────────
     max_evidence_entries: int = 200
@@ -104,6 +160,42 @@ class WorkflowState(BaseModel):
         if remaining > 0:
             self.findings.extend(new_findings[:remaining])
 
+    def calculate_recon_score(self) -> float:
+        """Calculate recon completeness score (0.0 - 1.0)."""
+        components = {
+            "routes": min(len(self.routes) / 10.0, 1.0),
+            "parameters": min(len(self.parameters) / 5.0, 1.0),
+            "sessions": min(len(self.sessions) / 1.0, 1.0) if self.sessions else 0.0,
+            "roles": min(len(self.roles) / 2.0, 1.0) if self.roles else 0.0,
+            "api_inventory": min(len(self.api_inventory) / 5.0, 1.0),
+            "auth_surface": min(len(self.auth_surface) / 2.0, 1.0),
+        }
+        self.recon_score = sum(components.values()) / len(components)
+        self.recon_complete = self.recon_score >= 0.5
+        return self.recon_score
+
+    def check_vuln_gate(self, attack_type: str) -> dict:
+        """Check if sufficient recon evidence exists to proceed with vulnerability testing."""
+        gates = {
+            "IDOR": len(self.routes) > 0 and len(self.parameters) > 0,
+            "BOLA": len(self.routes) > 0 and len(self.parameters) > 0,
+            "SSRF": len(self.routes) > 0,
+            "XSS": len(self.routes) > 0 and len(self.parameters) > 0,
+            "SQLi": len(self.routes) > 0 and len(self.parameters) > 0,
+            "NoSQLi": len(self.routes) > 0 and len(self.parameters) > 0,
+            "SSTI": len(self.routes) > 0 and len(self.parameters) > 0,
+            "XXE": len(self.routes) > 0,
+            "JWT": len(self.sessions) > 0 or len(self.extracted_tokens) > 0,
+            "PromptInjection": len(self.routes) > 0,
+        }
+        allowed = gates.get(attack_type, len(self.routes) > 0)
+        return {
+            "attack_type": attack_type,
+            "allowed": allowed,
+            "reason": "EVIDENCE_SUFFICIENT" if allowed else "INSUFFICIENT_EVIDENCE",
+            "recon_score": self.recon_score,
+        }
+
 
 class DAGOrchestrator:
     """
@@ -115,27 +207,18 @@ class DAGOrchestrator:
     def __init__(self):
         self.graph = nx.DiGraph()
         self.stages: Dict[str, Callable[[WorkflowState], WorkflowState]] = {}
-        self._build_16_stage_dag()
+        self._build_7_stage_dag()
 
-    def _build_16_stage_dag(self):
-        """Construct the 16-stage deterministic execution model."""
+    def _build_7_stage_dag(self):
+        """Construct the 7-stage continuous deterministic execution model."""
         stages = [
-            "STAGE_1_NORMALIZATION",
-            "STAGE_2_DISCOVERY",
-            "STAGE_3_UNKNOWN_SERVICE",
-            "STAGE_4_HTTP_FINGERPRINT",
-            "STAGE_5_WEB_ENUMERATION",
-            "STAGE_6_HTTP_SECURITY",
-            "STAGE_7_DOM_ANALYSIS",
-            "STAGE_8_API_MAPPING",
-            "STAGE_9_CLOUD_ANALYSIS",
-            "STAGE_10_STATIC_BRIDGE",
-            "STAGE_11_CONSENSUS",
-            "STAGE_12_RISK_MODELING",
-            "STAGE_13_GOVERNANCE",
-            "STAGE_14_SANDBOX",
-            "STAGE_15_EVIDENCE",
-            "STAGE_16_REPORTING"
+            "STAGE_1_RECON",
+            "STAGE_2_ATTACK_SURFACE",
+            "STAGE_3_HYPOTHESIS",
+            "STAGE_4_VALIDATION",
+            "STAGE_5_SCORING",
+            "STAGE_6_CORRELATION",
+            "STAGE_7_NEXT_TARGET"
         ]
 
         for stage in stages:
@@ -164,90 +247,114 @@ class DAGOrchestrator:
         state.max_workflow_depth = gov.profile.max_workflow_depth
 
         execution_order = list(nx.topological_sort(self.graph))
+        
+        continuous_mode = True
+        loop_count = 0
 
-        for stage_name in execution_order:
-            # ── Check session deny ──────────────────────────────────
-            if CommandGateway._session_denied:
-                state.halt_execution = True
-                state.halt_reason = "Execution denied for this session by operator."
-                print(f"[DAG Engine] {state.halt_reason}")
-                break
+        while continuous_mode and not state.halt_execution:
+            loop_count += 1
+            print(f"\\n[DAG Engine] === CONTINUOUS DISCOVERY LOOP {loop_count} ===")
+            
+            # Snapshots to detect if new evidence was found
+            start_routes = len(state.routes)
+            start_params = len(state.parameters)
+            start_sessions = len(state.sessions)
 
-            # ── Check halt ──────────────────────────────────────────
-            if state.halt_execution:
-                print(f"[DAG Engine] Execution halted at {state.current_stage}. Reason: {state.halt_reason}")
-                break
-
-            # ── Check governor pause ────────────────────────────────
-            if gov.is_paused:
-                state.halt_execution = True
-                state.halt_reason = f"RuntimeGovernor paused: {gov.pause_reason}"
-                print(f"[DAG Engine] {state.halt_reason}")
-                break
-
-            # ── Check system health ─────────────────────────────────
-            sys_health = gov.check_system_health()
-            if sys_health["action"] == "PAUSED":
-                state.halt_execution = True
-                state.halt_reason = f"Memory pressure: {sys_health['rss_mb']:.0f} MB"
-                print(f"[DAG Engine] {state.halt_reason}")
-                break
-
-            # ── Check target health ─────────────────────────────────
-            target_health = gov.check_target_health()
-            if target_health["action"] == "PAUSED":
-                state.halt_execution = True
-                state.halt_reason = "Target critically unstable"
-                print(f"[DAG Engine] {state.halt_reason}")
-                break
-            elif "DOWNGRADED" in target_health.get("action", ""):
-                print(f"[DAG Engine] Target unstable — {target_health['action']}")
-                # Refresh state limits from new profile
-                state.scan_mode = gov.mode.value
-
-            state.current_stage = stage_name
-
-            if stage_name in self.stages:
-                try:
-                    # ── AI Commander Gatekeeper ─────────────────────
-                    try:
-                        from aegisx.agents.commander import CommanderAgent
-                        import asyncio
-                        commander = CommanderAgent()
-                        state_dict = {
-                            "target": state.target,
-                            "findings": state.findings,
-                            "workflow_depth": state.workflow_depth,
-                        }
-                        
-                        print(f"[DAG Engine] Consulting AI Commander for {stage_name}...")
-                        pipeline_result = asyncio.run(commander.process(state_dict))
-                        
-                        if pipeline_result.get("status") == "HALT":
-                            state.halt_execution = True
-                            state.halt_reason = "AI Commander halted execution."
-                            print("[DAG Engine] AI Commander halted execution.")
-                            break
-                            
-                        reasoning = pipeline_result.get("pipeline", {}).get("reasoning", "")
-                        if reasoning:
-                            print(f"[DAG Engine] AI Reasoning: {reasoning}")
-                            
-                    except Exception as e:
-                        print(f"[DAG Engine] AI Commander skipped due to error: {e}")
-
-                    stage_start = time.monotonic()
-                    state = self.stages[stage_name](state)
-                    stage_duration = time.monotonic() - stage_start
-
-                    # ── Phase timeout check ─────────────────────────
-                    if stage_duration > phase_timeout:
-                        print(f"[DAG Engine] WARNING: {stage_name} took {stage_duration:.1f}s (limit: {phase_timeout}s)")
-
-                except Exception as e:
+            for stage_name in execution_order:
+                # ── Check session deny ──────────────────────────────────
+                if CommandGateway._session_denied:
                     state.halt_execution = True
-                    state.halt_reason = f"Exception in {stage_name}: {str(e)}"
-                    print(f"[DAG Engine] FATAL ERROR: {state.halt_reason}")
+                    state.halt_reason = "Execution denied for this session by operator."
+                    print(f"[DAG Engine] {state.halt_reason}")
                     break
+
+                # ── Check halt ──────────────────────────────────────────
+                if state.halt_execution:
+                    print(f"[DAG Engine] Execution halted at {state.current_stage}. Reason: {state.halt_reason}")
+                    break
+
+                # ── Check governor pause ────────────────────────────────
+                if gov.is_paused:
+                    state.halt_execution = True
+                    state.halt_reason = f"RuntimeGovernor paused: {gov.pause_reason}"
+                    print(f"[DAG Engine] {state.halt_reason}")
+                    break
+
+                # ── Check system health ─────────────────────────────────
+                sys_health = gov.check_system_health()
+                if sys_health["action"] == "PAUSED":
+                    state.halt_execution = True
+                    state.halt_reason = f"Memory pressure: {sys_health['rss_mb']:.0f} MB"
+                    print(f"[DAG Engine] {state.halt_reason}")
+                    break
+
+                # ── Check target health ─────────────────────────────────
+                target_health = gov.check_target_health()
+                if target_health["action"] == "PAUSED":
+                    state.halt_execution = True
+                    state.halt_reason = "Target critically unstable"
+                    print(f"[DAG Engine] {state.halt_reason}")
+                    break
+                elif "DOWNGRADED" in target_health.get("action", ""):
+                    print(f"[DAG Engine] Target unstable — {target_health['action']}")
+                    # Refresh state limits from new profile
+                    state.scan_mode = gov.mode.value
+
+                state.current_stage = stage_name
+
+                if stage_name in self.stages:
+                    try:
+                        # ── AI Commander Gatekeeper ─────────────────────
+                        try:
+                            from aegisx.agents.commander import CommanderAgent
+                            import asyncio
+                            commander = CommanderAgent()
+                            state_dict = {
+                                "target": state.target,
+                                "findings": state.findings,
+                                "workflow_depth": state.workflow_depth,
+                            }
+                            
+                            print(f"[DAG Engine] Consulting AI Commander for {stage_name}...")
+                            pipeline_result = asyncio.run(commander.process(state_dict))
+                            
+                            if pipeline_result.get("status") == "HALT":
+                                state.halt_execution = True
+                                state.halt_reason = "AI Commander halted execution."
+                                print("[DAG Engine] AI Commander halted execution.")
+                                break
+                                
+                            reasoning = pipeline_result.get("pipeline", {}).get("reasoning", "")
+                            if reasoning:
+                                print(f"[DAG Engine] AI Reasoning: {reasoning}")
+                                
+                        except Exception as e:
+                            print(f"[DAG Engine] AI Commander skipped due to error: {e}")
+
+                        stage_start = time.monotonic()
+                        state = self.stages[stage_name](state)
+                        stage_duration = time.monotonic() - stage_start
+
+                        # ── Phase timeout check ─────────────────────────
+                        if stage_duration > phase_timeout:
+                            print(f"[DAG Engine] WARNING: {stage_name} took {stage_duration:.1f}s (limit: {phase_timeout}s)")
+
+                    except Exception as e:
+                        state.halt_execution = True
+                        state.halt_reason = f"Exception in {stage_name}: {str(e)}"
+                        print(f"[DAG Engine] FATAL ERROR: {state.halt_reason}")
+                        break
+            
+            # Check if new evidence was found during this loop
+            if not state.halt_execution:
+                new_routes = len(state.routes) - start_routes
+                new_params = len(state.parameters) - start_params
+                new_sessions = len(state.sessions) - start_sessions
+                
+                if new_routes == 0 and new_params == 0 and new_sessions == 0:
+                    print(f"[DAG Engine] Continuous Discovery exhausted. No new evidence found.")
+                    continuous_mode = False
+                else:
+                    print(f"[DAG Engine] Loop {loop_count} complete. Found {new_routes} new routes, {new_params} new params, {new_sessions} new sessions. Looping back...")
 
         return state

@@ -1,63 +1,82 @@
 """
-OWASP Juice Shop Reasoning Skill
-================================
-Injects context and hypotheses specifically tailored for OWASP Juice Shop challenges.
-This skill provides the AI Commander with knowledge of known vulnerabilities in the Juice Shop application.
+OWASP Juice Shop Master Reasoning Skill
+=========================================
+Orchestrates all Juice Shop sub-skills and provides a unified challenge context.
+Cross-references discovered routes against known challenge targets.
+
+Anti-Hallucination Gate: Every hypothesis MUST cite an exact challenge_id.
 """
 import time
 from aegisx.core.orchestration.dag_engine import WorkflowState
 from aegisx.core.ui.console import ConsoleUI
 
 
+def _get_all_challenge_count() -> int:
+    """Count total challenges across all sub-skill modules."""
+    from aegisx.skills.injection_reasoning import INJECTION_CHALLENGES
+    from aegisx.skills.xss_reasoning import XSS_CHALLENGES
+    from aegisx.skills.broken_access_reasoning import BAC_CHALLENGES
+    from aegisx.skills.broken_auth_reasoning import BROKEN_AUTH_CHALLENGES
+    from aegisx.skills.sensitive_data_reasoning import SDE_CHALLENGES
+    from aegisx.skills.improper_input_reasoning import INPUT_CHALLENGES
+    from aegisx.skills.vulnerable_components_reasoning import VC_CHALLENGES
+    from aegisx.skills.crypto_deser_xxe_reasoning import MISC_CHALLENGES
+
+    return (len(INJECTION_CHALLENGES) + len(XSS_CHALLENGES) + len(BAC_CHALLENGES) +
+            len(BROKEN_AUTH_CHALLENGES) + len(SDE_CHALLENGES) + len(INPUT_CHALLENGES) +
+            len(VC_CHALLENGES) + len(MISC_CHALLENGES))
+
+
 def _execute(state: WorkflowState) -> WorkflowState:
     """
-    Juice Shop Reasoning: Injects known Juice Shop challenges into the attack surface
-    to guide the AI in targeting specific vulnerabilities.
+    Juice Shop Master Reasoning: Injects a summary context node and
+    validates that all sub-skills have been loaded.
     """
-    ConsoleUI.header("SKILL: OWASP Juice Shop Reasoning")
-    
-    # We consolidate the challenges into broad categories to avoid token overflow,
-    # but give the AI enough context to know what to look for based on the Juice Shop Score Board.
-    
+    ConsoleUI.header("SKILL: OWASP Juice Shop Master Reasoning")
+
+    total_challenges = _get_all_challenge_count()
+
+    # Summary context for the AI Commander
     juice_shop_context = {
         "finding_type": "OWASP Juice Shop Challenge Context",
         "title": "OWASP Juice Shop Target Identified",
         "severity": "INFO",
         "endpoint": "global",
-        "evidence": "User loaded Juice Shop challenge profile.",
+        "evidence": f"Juice Shop challenge profile loaded: {total_challenges} challenges across 10+ categories.",
         "confidence": 1.0,
         "validation": "manual_skill_activation",
         "risk_level": "INFO",
+        "provenance": "OWASP_JUICE_SHOP_SCOREBOARD",
         "details": (
-            "The target is an OWASP Juice Shop instance. Known challenges include:\n"
-            "- XSS: DOM XSS, Reflected XSS, API-only XSS, Bonus Payload, HTTP-Header XSS.\n"
-            "- Injection: Login Admin/Jim/Bender, SQLi Database Schema extraction, NoSQL DoS/Manipulation.\n"
-            "- Broken Access Control: View/Manipulate Basket, Admin Section, Forged Feedback/Review, SSRF.\n"
-            "- Sensitive Data Exposure: Confidential Document, Exposed Credentials, Password Hash Leak, FTP Backups.\n"
-            "- Improper Input Validation: Zero Stars, Payback Time, Upload Size/Type bypass, Deluxe Fraud.\n"
-            "- Broken Authentication: Password Strength, CAPTCHA Bypass, 2FA bypass, JWT forging.\n"
-            "- Security Misconfiguration: Error Handling, Deprecated Interfaces, B2B Interface.\n"
-            "- AI/LLM: AI Debugging, Chatbot Prompt Injection, Greedy Chatbot Manipulation.\n"
-            "- Vulnerable Components: Legacy Typosquatting, Local File Read, Supply Chain Attack.\n"
-            "- XXE: XXE Data Access, XXE DoS.\n"
-            "- Cryptographic Issues: Weird Crypto, Forged Coupon, Nested Easter Egg."
+            f"The target is an OWASP Juice Shop instance. {total_challenges} challenges loaded:\n"
+            "- Injection (SQLi, NoSQL, LLM Prompt Injection, SSTi)\n"
+            "- XSS (DOM, Reflected, Stored, CSP Bypass, HTTP-Header, Video)\n"
+            "- Broken Access Control (IDOR, CSRF, SSRF, Admin Panel, Web3)\n"
+            "- Broken Authentication (Password Reset, 2FA, OSINT, Credential Stuffing)\n"
+            "- Sensitive Data Exposure (FTP Backups, Geo Stalking, Leaked Keys, Blueprints)\n"
+            "- Improper Input Validation (Upload Bypass, Payment Fraud, Admin Registration)\n"
+            "- Vulnerable Components (Typosquatting, JWT Forging, Supply Chain)\n"
+            "- Cryptographic Issues (Weak Crypto, Forged Coupons, Nested Encoding)\n"
+            "- XXE (Data Access, DoS via Billion Laughs)\n"
+            "- Insecure Deserialization (RCE, Memory Bomb)\n"
+            "- Security Misconfiguration, Observability, Anti-Automation, Redirects\n\n"
+            "ANTI-HALLUCINATION: All hypotheses reference exact challenge IDs from the Score Board."
         )
     }
 
-    # Add the consolidated context as a hypothesis/attack surface node
     state.attack_surface_nodes.append(juice_shop_context)
-    
+
     if "juice_shop_reasoning" not in state.explored_paths:
         state.explored_paths.append("juice_shop_reasoning")
 
     state.evidence_ledger.append({
         "stage": "SKILL_JUICE_SHOP_REASONING",
         "timestamp": time.time(),
-        "action": "inject_juice_shop_challenges",
-        "result": {"context_injected": True}
+        "action": "inject_juice_shop_master_context",
+        "result": {"context_injected": True, "total_challenges": total_challenges}
     })
 
-    ConsoleUI.success("Injected OWASP Juice Shop challenge context into AI state.")
+    ConsoleUI.success(f"Injected OWASP Juice Shop master context: {total_challenges} challenges across all categories.")
     return state
 
 
@@ -65,10 +84,10 @@ def register(registry):
     from aegisx.skills.registry import SkillCapability
     registry.register(SkillCapability(
         skill_id="juice_shop_reasoning",
-        name="OWASP Juice Shop Reasoning",
-        description="Injects known OWASP Juice Shop challenges (XSS, Injection, Broken Access Control, etc.) into the AI context.",
+        name="OWASP Juice Shop Master Reasoning",
+        description=f"Master orchestrator for all Juice Shop challenge skills — anti-hallucination enabled.",
         category="custom_targets",
-        noise_score=0,  # Passive skill, only injects knowledge
+        noise_score=0,
         required_inputs=[],
         produced_outputs=["attack_surface_nodes"],
         supported_phases=["Reconnaissance", "Vulnerability Discovery"],

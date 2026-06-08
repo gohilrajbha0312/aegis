@@ -64,6 +64,7 @@ class AIOperationsOrchestrator:
         """
         self.registry = {
             # ── LOW-NOISE (Preferred) ────────────────────────────────
+            "ContinuousReconLoopAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.recon_coverage', fromlist=['ContinuousReconLoopAgent']).ContinuousReconLoopAgent().process(state)),
             "ReconAgent": phase_3_network_enum,                    # Single nmap scan
             "TrafficAnalyzerAgent": phase_4_http_intelligence,     # HTTP header intelligence
             "JSIntelligenceAgent": phase_7_js_intelligence,        # JS route extraction
@@ -72,6 +73,81 @@ class AIOperationsOrchestrator:
             "AdaptiveValidationEngine": phase_12b_web_vuln_suite,  # AI adaptive validation
             "ValidationAgent": self._validation_wrapper,           # Finding validation
             "AuthAnalyzerAgent": phase_9_auth_boundary,            # Auth boundary analysis (low-noise)
+            "EvidenceGraphAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.evidence_graph', fromlist=['EvidenceGraphAgent']).EvidenceGraphAgent().process(state)),
+            "SessionIsolationAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.session_isolation', fromlist=['SessionIsolationAgent']).SessionIsolationAgent().process(state)),
+            "RouteOwnershipAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.session_isolation', fromlist=['RouteOwnershipAgent']).RouteOwnershipAgent().process(state)),
+            "DifferentialResponseAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.session_isolation', fromlist=['DifferentialResponseAgent']).DifferentialResponseAgent().process(state)),
+            
+            # ── ENTERPRISE RECON & MEMORY (Skills 88, 89, 92, 102, 103, 104, 106, 113) ────────
+            "RuntimeMemoryAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.state_compression', fromlist=['RuntimeMemoryAgent']).RuntimeMemoryAgent().process(state)),
+            "ReconExpansionAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.recon_coverage', fromlist=['ReconExpansionAgent']).ReconExpansionAgent().process(state)),
+            "RouteRiskScoringAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.recon_coverage', fromlist=['RouteRiskScoringAgent']).RouteRiskScoringAgent().process(state)),
+            "RouteLineageAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.recon_coverage', fromlist=['RouteLineageAgent']).RouteLineageAgent().process(state)),
+            "ParameterLineageAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.recon_coverage', fromlist=['ParameterLineageAgent']).ParameterLineageAgent().process(state)),
+            "DiscoveryConfidenceAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.recon_coverage', fromlist=['DiscoveryConfidenceAgent']).DiscoveryConfidenceAgent().process(state)),
+            "AttackSurfaceGrowthAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.recon_coverage', fromlist=['AttackSurfaceGrowthAgent']).AttackSurfaceGrowthAgent().process(state)),
+            "ReconBudgetOptimizerAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.recon_coverage', fromlist=['ReconBudgetOptimizerAgent']).ReconBudgetOptimizerAgent().process(state)),
+            
+            # ── ENTERPRISE BEHAVIOR & CORRELATION (Skills 90, 91, 98, 105, 108, 111) 
+            "SessionFingerprintAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.session_isolation', fromlist=['SessionFingerprintAgent']).SessionFingerprintAgent().process(state)),
+            "MultiSessionCorrelationAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.session_isolation', fromlist=['MultiSessionCorrelationAgent']).MultiSessionCorrelationAgent().process(state)),
+            "APIBehaviorAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.api_behavior', fromlist=['APIBehaviorAgent']).APIBehaviorAgent().process(state)),
+            "ResponseFingerprintAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.api_behavior', fromlist=['ResponseFingerprintAgent']).ResponseFingerprintAgent().process(state)),
+            "RuntimeAnomalyAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.api_behavior', fromlist=['RuntimeAnomalyAgent']).RuntimeAnomalyAgent().process(state)),
+            "AttackPathCorrelationAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.evidence_graph', fromlist=['AttackPathCorrelationAgent']).AttackPathCorrelationAgent().process(state)),
+            
+            # ── ENTERPRISE VALIDATION TRUST & CONFLICT (Skills 101, 112) ──
+            "EvidenceTrustAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.validation', fromlist=['EvidenceTrustAgent']).EvidenceTrustAgent().process(state)),
+            "EvidenceConflictAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.validation', fromlist=['EvidenceConflictAgent']).EvidenceConflictAgent().process(state)),
+            
+            # ── ENTERPRISE GOVERNANCE & COMPLETION (Skills 86-100, 109, 110, 115) ────────────────
+            "AgentHealthAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.enterprise_governance', fromlist=['AgentHealthAgent']).AgentHealthAgent().process(state)),
+            "AgentSchedulerAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.enterprise_governance', fromlist=['AgentSchedulerAgent']).AgentSchedulerAgent().process(state)),
+            "RuntimeGovernanceAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.enterprise_governance', fromlist=['RuntimeGovernanceAgent']).RuntimeGovernanceAgent().process(state)),
+            "AttackPathExpansionAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.evidence_graph', fromlist=['AttackPathExpansionAgent']).AttackPathExpansionAgent().process(state)),
+            "AgentConsensusAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.enterprise_governance', fromlist=['AgentConsensusAgent']).AgentConsensusAgent().process(state)),
+            "CampaignCompletionAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.enterprise_governance', fromlist=['CampaignCompletionAgent']).CampaignCompletionAgent().process(state)),
+            
+            # ── NEW EXTENSION AGENTS (Skills 146-150) ────────────────
+            "GraphQLExpansionAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.graphql_expansion', fromlist=['GraphQLExpansionAgent']).GraphQLExpansionAgent().process(state)),
+            "RouteCoverageAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.route_coverage', fromlist=['RouteCoverageAgent']).RouteCoverageAgent().process(state)),
+            "SessionValidationAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.session_validation', fromlist=['SessionValidationAgent']).SessionValidationAgent().process(state)),
+            "TokenAnalysisAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.token_analysis', fromlist=['TokenAnalysisAgent']).TokenAnalysisAgent().process(state)),
+            "PriceManipulationAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.price_manipulation', fromlist=['PriceManipulationAgent']).PriceManipulationAgent().process(state)),
+            
+            # ── AUTONOMOUS RUNTIME INTELLIGENCE (Skills 116-130) ─────────────────────────
+            "TargetPrioritizationAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['TargetPrioritizationAgent']).TargetPrioritizationAgent().process(state)),
+            "EvidenceLifecycleAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['EvidenceLifecycleAgent']).EvidenceLifecycleAgent().process(state)),
+            "RouteClusteringAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['RouteClusteringAgent']).RouteClusteringAgent().process(state)),
+            "ParameterRelationshipAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['ParameterRelationshipAgent']).ParameterRelationshipAgent().process(state)),
+            "SessionTrustAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['SessionTrustAgent']).SessionTrustAgent().process(state)),
+            "ValidationStabilityAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['ValidationStabilityAgent']).ValidationStabilityAgent().process(state)),
+            "ResourceEfficiencyAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['ResourceEfficiencyAgent']).ResourceEfficiencyAgent().process(state)),
+            "ReconIntelligenceAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['ReconIntelligenceAgent']).ReconIntelligenceAgent().process(state)),
+            "EvidenceAgingAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['EvidenceAgingAgent']).EvidenceAgingAgent().process(state)),
+            "AttackPathScoringAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['AttackPathScoringAgent']).AttackPathScoringAgent().process(state)),
+            "MultiAgentConflictResolutionAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['MultiAgentConflictResolutionAgent']).MultiAgentConflictResolutionAgent().process(state)),
+            "CampaignMemoryAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['CampaignMemoryAgent']).CampaignMemoryAgent().process(state)),
+            "EnterpriseAuditAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['EnterpriseAuditAgent']).EnterpriseAuditAgent().process(state)),
+            "ReportingGovernanceAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['ReportingGovernanceAgent']).ReportingGovernanceAgent().process(state)),
+            "AutonomousDecisionAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.runtime_intelligence', fromlist=['AutonomousDecisionAgent']).AutonomousDecisionAgent().process(state)),
+            
+            # ── AUTONOMOUS CAMPAIGN MANAGEMENT (Skills 131-145) ──────────────────────────
+            "CampaignStrategyAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['CampaignStrategyAgent']).CampaignStrategyAgent().process(state)),
+            "AIUtilizationAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['AIUtilizationAgent']).AIUtilizationAgent().process(state)),
+            "DynamicModelSelectionAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['DynamicModelSelectionAgent']).DynamicModelSelectionAgent().process(state)),
+            "HypothesisQualityAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['HypothesisQualityAgent']).HypothesisQualityAgent().process(state)),
+            "ReconDepthAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['ReconDepthAgent']).ReconDepthAgent().process(state)),
+            "AttackSurfaceDriftAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['AttackSurfaceDriftAgent']).AttackSurfaceDriftAgent().process(state)),
+            "ValidationQueueAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['ValidationQueueAgent']).ValidationQueueAgent().process(state)),
+            "SessionBehaviorAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['SessionBehaviorAgent']).SessionBehaviorAgent().process(state)),
+            "RouteOwnershipVerificationAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['RouteOwnershipVerificationAgent']).RouteOwnershipVerificationAgent().process(state)),
+            "EvidenceCompressionAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['EvidenceCompressionAgent']).EvidenceCompressionAgent().process(state)),
+            "RuntimeLearningAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['RuntimeLearningAgent']).RuntimeLearningAgent().process(state)),
+            "ConsensusGovernanceAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['ConsensusGovernanceAgent']).ConsensusGovernanceAgent().process(state)),
+            "AutonomousRecoveryAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['AutonomousRecoveryAgent']).AutonomousRecoveryAgent().process(state)),
+            "EnterpriseMetricsAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['EnterpriseMetricsAgent']).EnterpriseMetricsAgent().process(state)),
+            "CampaignTerminationAgent": lambda state: __import__('asyncio').run(__import__('aegisx.agents.campaign_management', fromlist=['CampaignTerminationAgent']).CampaignTerminationAgent().process(state)),
             
             # ── VULNERABILITY REASONING SKILLS (Zero/Low Noise) ──────
             "AuthorizationReasoningSkill": lambda state: get_skill_registry().execute_skill("authorization_reasoning", state),
@@ -101,6 +177,11 @@ class AIOperationsOrchestrator:
             "StateTransitionAnalyzer": self._state_transition_wrapper,
             "AttackGraphIntelligenceAgent": self._attack_graph_wrapper,
             "LoginDetectionAgent": self._login_detection_wrapper,
+            
+            # ── CONTINUOUS DISCOVERY AGENTS ──────────────────────────
+            "ConfidenceScoringAgent": self._confidence_scoring_wrapper,
+            "FindingCorrelationAgent": self._finding_correlation_wrapper,
+            "NextTargetAgent": self._next_target_wrapper,
         }
         
     def _login_detection_wrapper(self, state: WorkflowState) -> WorkflowState:
@@ -116,6 +197,77 @@ class AIOperationsOrchestrator:
             state.routes = new_state.get("routes", state.routes)
         except Exception as e:
             ConsoleUI.warning(f"Login Detection skipped: {e}")
+        return state
+
+    def _confidence_scoring_wrapper(self, state: WorkflowState) -> WorkflowState:
+        from aegisx.agents.confidence_scoring import ConfidenceScoringAgent
+        import asyncio
+        agent = ConfidenceScoringAgent()
+        try:
+            new_state = asyncio.run(agent.process(state.model_dump()))
+            state.findings = new_state.get("scored_findings", state.findings)
+        except Exception as e:
+            ConsoleUI.warning(f"Confidence Scoring skipped: {e}")
+        return state
+
+    def _ai_validation_wrapper(self, state: WorkflowState) -> WorkflowState:
+        from aegisx.agents.validation import ValidationConsensusAgent, EvidenceReplayAgent, EvidenceTrustAgent, EvidenceConflictAgent
+        import asyncio
+        
+        # SKILL 101: EvidenceTrustAgent
+        agent_trust = EvidenceTrustAgent()
+        try:
+            new_state = asyncio.run(agent_trust.process(state.model_dump()))
+            state.findings = new_state.get("findings", state.findings)
+        except Exception as e:
+            ConsoleUI.warning(f"EvidenceTrust skipped: {e}")
+            
+        # SKILL 93/107: EvidenceReplayAgent
+        agent1 = EvidenceReplayAgent()
+        try:
+            new_state = asyncio.run(agent1.process(state.model_dump()))
+            state.findings = new_state.get("findings", state.findings)
+        except Exception as e:
+            ConsoleUI.warning(f"EvidenceReplay skipped: {e}")
+            
+        agent2 = ValidationConsensusAgent()
+        try:
+            new_state = asyncio.run(agent2.process(state.model_dump()))
+            state.findings = new_state.get("findings", state.findings)
+        except Exception as e:
+            ConsoleUI.warning(f"AI Validation Consensus skipped: {e}")
+            
+        # SKILL 112: EvidenceConflictAgent
+        agent_conflict = EvidenceConflictAgent()
+        try:
+            new_state = asyncio.run(agent_conflict.process(state.model_dump()))
+            state.findings = new_state.get("findings", state.findings)
+        except Exception as e:
+            ConsoleUI.warning(f"EvidenceConflict skipped: {e}")
+            
+        return state
+
+    def _finding_correlation_wrapper(self, state: WorkflowState) -> WorkflowState:
+        from aegisx.agents.finding_correlation import FindingCorrelationAgent
+        import asyncio
+        agent = FindingCorrelationAgent()
+        try:
+            new_state = asyncio.run(agent.process(state.model_dump()))
+            state.findings = new_state.get("correlated_findings", state.findings)
+        except Exception as e:
+            ConsoleUI.warning(f"Finding Correlation skipped: {e}")
+        return state
+
+    def _next_target_wrapper(self, state: WorkflowState) -> WorkflowState:
+        from aegisx.agents.next_target import NextTargetAgent
+        import asyncio
+        agent = NextTargetAgent()
+        try:
+            new_state = asyncio.run(agent.process(state.model_dump()))
+            state.analyzed_routes = new_state.get("analyzed_routes", state.analyzed_routes)
+            state.target = new_state.get("next_target", state.target)
+        except Exception as e:
+            ConsoleUI.warning(f"Next Target Selection skipped: {e}")
         return state
         
     def validate_registry(self, state: WorkflowState) -> WorkflowState:
@@ -294,6 +446,7 @@ class AIOperationsOrchestrator:
 
     def _phase_13_reporting_wrapper(self, state: WorkflowState) -> WorkflowState:
         """Explicit wrapper for Phase 13 to build and export the Exposure Graph."""
+        import asyncio
         ConsoleUI.info(f"Executing Phase 13: Generating Attack Surface Graph & Reporting")
         
         if not state.findings:
@@ -302,6 +455,17 @@ class AIOperationsOrchestrator:
             
         graph_engine = ExposureGraph()
         
+        # Deterministic Structural Node Generation
+        for r in state.routes:
+            route_path = r.get("path", str(r)) if isinstance(r, dict) else str(r)
+            graph_engine.add_node(f"route:{route_path}", NodeType.APPLICATION_ROUTE, {"path": route_path})
+        for p in state.parameters:
+            param_name = p.get("name", str(p)) if isinstance(p, dict) else str(p)
+            graph_engine.add_node(f"param:{param_name}", NodeType.EXTERNAL_ASSET, {"name": param_name})
+        for s in getattr(state, "sessions", []):
+            sess_id = s.get("id", str(s)) if isinstance(s, dict) else str(s)
+            graph_engine.add_node(f"session:{sess_id}", NodeType.EXTERNAL_ASSET, {"session_id": sess_id})
+            
         # Populate Graph from AI Findings
         for finding in state.findings:
             nodes = finding.get("nodes", [])
@@ -349,9 +513,47 @@ class AIOperationsOrchestrator:
         else:
             ConsoleUI.warning("Graph engine initialized but no nodes were correlated.")
 
-        # ── PDF Report Generation ────────────────────────────────
+        # Phase 12: Evidence Correlation Graph
+        from aegisx.agents.evidence_graph import EvidenceGraphAgent, EvidenceChainIntegrityAgent
+        ConsoleUI.header("PHASE 12: EVIDENCE CORRELATION & CHAIN INTEGRITY")
         try:
-            from aegisx.core.reporting.pdf_reporter import PDFReportGenerator
+            agent = EvidenceGraphAgent()
+            new_state = asyncio.run(agent.process(state.model_dump()))
+            state.findings = new_state.get("findings", state.findings)
+            state.evidence_graph = new_state.get("evidence_graph", state.evidence_graph)
+            
+            # SKILL 95: EvidenceChainIntegrityAgent
+            integrity_agent = EvidenceChainIntegrityAgent()
+            new_state = asyncio.run(integrity_agent.process(state.model_dump()))
+            state.findings = new_state.get("findings", state.findings)
+        except Exception as e:
+            ConsoleUI.warning(f"Phase 12 (Evidence Graph) failed: {e}")
+            
+        # Phase 13: Enterprise Report Generation
+        ConsoleUI.header("PHASE 13: ENTERPRISE REPORTING")
+        
+        # SKILL 114: EnterpriseReportIntegrityAgent
+        ConsoleUI.info("[EnterpriseReportIntegrityAgent] Enforcing global reporting standard (Evidence, Replay, Validation, Confidence >= 80).")
+        validated = []
+        rejected = 0
+        for f in state.findings:
+            conf = f.get('confidence', 0) if isinstance(f, dict) else getattr(f, 'confidence', 0)
+            if conf >= 80:
+                ev_str = str(f.get("evidence", [])).lower()
+                if "replay" in ev_str and "differential" in ev_str:
+                    validated.append(f)
+                else:
+                    rejected += 1
+                    ConsoleUI.warning(f"Finding rejected by EnterpriseReportIntegrityAgent: Missing Replay/Differential evidence.")
+            else:
+                rejected += 1
+                
+        if rejected > 0:
+            ConsoleUI.warning(f"[EnterpriseReportIntegrityAgent] Stripped {rejected} unvalidated hypotheses from final report.")
+        state.findings = validated
+        
+        from aegisx.core.reporting.pdf_reporter import PDFReportGenerator
+        try:
             reporter = PDFReportGenerator(output_dir="reports")
             pdf_path = reporter.generate(
                 workflow_id=state.workflow_id,
@@ -412,8 +614,13 @@ class AIOperationsOrchestrator:
             # 1. Consult AI Commander
             ConsoleUI.info("Consulting AI Commander for next actions...")
             try:
-                # Provide the entire state object so AI sees graphs, paths, history
+                # SKILL 87: Pre-filter agents
+                from aegisx.agents.enterprise_governance import AgentSchedulerAgent
                 state_dict = state.model_dump()
+                state_dict = asyncio.run(AgentSchedulerAgent().process(state_dict))
+                
+                # Provide the entire state object so AI sees graphs, paths, history
+
                 
                 llm_start = time.time()
                 pipeline_result = asyncio.run(commander.process(state_dict))
@@ -498,6 +705,12 @@ class AIOperationsOrchestrator:
                             state.completed_agents.append(action)
                             state.execution_history.append(action)
                             
+                            # SKILL 86: Track Health
+                            if not hasattr(state, 'agent_health') or not isinstance(getattr(state, 'agent_health', None), dict):
+                                state.agent_health = {}
+                            stats = state.agent_health.setdefault(action, {"executions": 0, "failures": 0})
+                            stats["executions"] += 1
+                            
                             # Agent Effectiveness Scoring for single execution
                             _post_findings = len(state.findings)
                             _post_evidence = len(state.evidence_ledger)
@@ -525,10 +738,28 @@ class AIOperationsOrchestrator:
                             
                         except Exception as e:
                             ConsoleUI.error(f"Error executing {action}: {e}")
+                            if not hasattr(state, 'agent_health') or not isinstance(getattr(state, 'agent_health', None), dict):
+                                state.agent_health = {}
+                            stats = state.agent_health.setdefault(action, {"executions": 0, "failures": 0})
+                            stats["executions"] += 1
+                            stats["failures"] += 1
                     else:
                         # Ignore booleans or weird reasoning strings accidentally passed as actions
                         if str(action).lower() not in ['true', 'false'] and "reasoning" not in str(action).lower():
                             ConsoleUI.warning(f"Agent '{action}' requested by AI but not found in registry. Skipping.")
+                
+                # Post-loop Governance (Skills 86 & 100)
+                from aegisx.agents.enterprise_governance import AgentHealthAgent, RuntimeGovernanceAgent
+                state_dict = state.model_dump()
+                state_dict = asyncio.run(AgentHealthAgent().process(state_dict))
+                state_dict = asyncio.run(RuntimeGovernanceAgent().process(state_dict))
+                state.unavailable_agents = state_dict.get("unavailable_agents", state.unavailable_agents)
+                state.agent_health = state_dict.get("agent_health", state.agent_health)
+                
+                # Apply strictly governed findings
+                gov_findings = state_dict.get("findings", [])
+                if len(gov_findings) < len(state.findings):
+                    state.findings = [f for f in state.findings if f in gov_findings or getattr(f, 'title', None) in [x.get('title') for x in gov_findings]]
                         
             except Exception as e:
                 ConsoleUI.error(f"AI Commander execution failed: {e}")

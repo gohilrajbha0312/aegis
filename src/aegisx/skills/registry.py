@@ -68,6 +68,12 @@ class SkillRegistry:
                 lines.append(f"  {noise_label} {skill.name} (noise:{skill.noise_score}) — {skill.description}")
         return "\n".join(lines)
 
+    def list_by_tag(self, tag: str) -> List[SkillCapability]:
+        """Filter skills whose description or category contains the given tag."""
+        tag_lower = tag.lower()
+        return [s for s in self._skills.values()
+                if tag_lower in s.description.lower() or tag_lower in s.category.lower()]
+
     def all(self) -> List[SkillCapability]:
         return list(self._skills.values())
 
@@ -106,6 +112,15 @@ def _register_all_skills(registry: SkillRegistry):
     from aegisx.skills.data_exposure_reasoning import register as reg_data
     from aegisx.skills.error_analysis_reasoning import register as reg_error
     from aegisx.skills.juice_shop_reasoning import register as reg_juice_shop
+    # ── Juice Shop Challenge Skills ──────────────────────────────────
+    from aegisx.skills.injection_reasoning import register as reg_injection
+    from aegisx.skills.xss_reasoning import register as reg_xss
+    from aegisx.skills.broken_access_reasoning import register as reg_bac
+    from aegisx.skills.broken_auth_reasoning import register as reg_bauth
+    from aegisx.skills.sensitive_data_reasoning import register as reg_sde
+    from aegisx.skills.improper_input_reasoning import register as reg_input
+    from aegisx.skills.vulnerable_components_reasoning import register as reg_vc
+    from aegisx.skills.crypto_deser_xxe_reasoning import register as reg_crypto
 
     reg_authz(registry)
     reg_authn(registry)
@@ -115,3 +130,46 @@ def _register_all_skills(registry: SkillRegistry):
     reg_data(registry)
     reg_error(registry)
     reg_juice_shop(registry)
+    # ── Juice Shop Challenge Skills ──────────────────────────────────
+    reg_injection(registry)
+    reg_xss(registry)
+    reg_bac(registry)
+    reg_bauth(registry)
+    reg_sde(registry)
+    reg_input(registry)
+    reg_vc(registry)
+    reg_crypto(registry)
+
+    # ── Enterprise Recon Intelligence Skills ─────────────────────────
+    from aegisx.skills.recon.route_discovery import register as reg_route
+    from aegisx.skills.recon.parameter_discovery import register as reg_param
+    from aegisx.skills.recon.auth_discovery import register as reg_auth_disc
+    from aegisx.skills.recon.authz_surface import register as reg_authz_surf
+    from aegisx.skills.recon.js_intelligence import register as reg_js
+    from aegisx.skills.recon.openapi_intelligence import register as reg_openapi
+    from aegisx.skills.recon.graphql_intelligence import register as reg_graphql
+    from aegisx.skills.recon.hidden_asset_discovery import register as reg_hidden
+    from aegisx.skills.recon.security_header_intel import register as reg_headers
+    from aegisx.skills.recon.state_machine_discovery import register as reg_state
+    from aegisx.skills.recon.api_inventory import register as reg_api_inv
+    from aegisx.skills.recon.session_correlation import register as reg_session
+    from aegisx.skills.recon.evidence_integrity import register as reg_evidence
+    from aegisx.skills.recon.hallucination_detector import register as reg_hallucination
+    from aegisx.skills.recon.recon_completeness import register as reg_completeness
+
+    reg_route(registry)
+    reg_param(registry)
+    reg_auth_disc(registry)
+    reg_authz_surf(registry)
+    reg_js(registry)
+    reg_openapi(registry)
+    reg_graphql(registry)
+    reg_hidden(registry)
+    reg_headers(registry)
+    reg_state(registry)
+    reg_api_inv(registry)
+    reg_session(registry)
+    reg_evidence(registry)
+    reg_hallucination(registry)
+    reg_completeness(registry)
+

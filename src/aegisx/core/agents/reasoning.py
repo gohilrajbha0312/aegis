@@ -38,12 +38,12 @@ class LangGraphReasoningEngine:
         self.use_mock = use_mock
         self.memory = AgentMemoryStore()
         
-        api_key = os.getenv("OPENROUTER_API_KEY_2")
+        api_key = os.getenv("GEMINI_API_KEY")
         
         if self.use_mock or not _GENAI_AVAILABLE or not api_key:
             self.client = None
             if not self.use_mock:
-                ConsoleUI.warning("Missing OPENROUTER_API_KEY_2 or google-genai, falling back to mock.")
+                ConsoleUI.warning("Missing GEMINI_API_KEY or google-genai, falling back to mock.")
                 self.use_mock = True
         else:
             try:

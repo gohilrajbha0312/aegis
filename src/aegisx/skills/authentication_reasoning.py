@@ -24,7 +24,8 @@ def _execute(state: WorkflowState) -> WorkflowState:
 
     # 1. Analyze discovered cookies for session security
     for cookie in state.discovered_cookies:
-        cookie_lower = cookie.lower()
+        cookie_str = cookie.get("name", str(cookie)) if isinstance(cookie, dict) else str(cookie)
+        cookie_lower = cookie_str.lower()
         if "session" in cookie_lower or "sid" in cookie_lower:
             hypotheses.append({
                 "type": "session_cookie_detected",
@@ -73,27 +74,32 @@ def _execute(state: WorkflowState) -> WorkflowState:
         pass
 
     # 3. Detect auth-related routes from discovered endpoints
-    auth_routes = [r for r in state.routes if any(
-        kw in r.lower() for kw in ["login", "auth", "signin", "register", "reset", "password", "logout", "token"]
-    )]
+    auth_routes = []
+    for r in state.routes:
+        r_str = r.get("route", str(r)) if isinstance(r, dict) else str(r)
+        if any(kw in r_str.lower() for kw in ["login", "auth", "signin", "register", "reset", "password", "logout", "token"]):
+            auth_routes.append(r)
+            
     if auth_routes:
+        auth_routes_str = [r.get("route", str(r)) if isinstance(r, dict) else str(r) for r in auth_routes]
         hypotheses.append({
             "type": "auth_routes_discovered",
             "routes": auth_routes,
             "confidence": 0.85,
-            "reasoning": f"Authentication-related routes found: {', '.join(auth_routes[:5])}"
+            "reasoning": f"Authentication-related routes found: {', '.join(auth_routes_str[:5])}"
         })
         ConsoleUI.info(f"  [Auth Routes] {len(auth_routes)} authentication-related endpoints found")
 
     # 4. Check for auth state consistency (single request)
     for route in auth_routes[:2]:  # Max 2 requests
+        route_str = route.get("route", str(route)) if isinstance(route, dict) else str(route)
         try:
-            resp = http_client.get(f"{base}{route}", timeout=5, allow_redirects=False)
+            resp = http_client.get(f"{base}{route_str}", timeout=5, allow_redirects=False)
             if resp.status_code == 200:
                 # Auth endpoint accessible without redirect = potential issue
                 hypotheses.append({
                     "type": "auth_no_redirect",
-                    "route": route,
+                    "route": route_str,
                     "confidence": 0.5,
                     "reasoning": "Auth endpoint returns 200 directly (no auth redirect)"
                 })

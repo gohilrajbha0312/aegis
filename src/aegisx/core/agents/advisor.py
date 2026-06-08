@@ -22,12 +22,12 @@ class AIGovernanceAdvisor:
     def __init__(self, use_mock: bool = False):
         self.use_mock = use_mock
         
-        api_key = os.getenv("OPENROUTER_API_KEY_2")
+        api_key = os.getenv("GEMINI_API_KEY")
         
         if self.use_mock or not api_key:
             self.client = None
             if not self.use_mock:
-                ConsoleUI.warning("No OPENROUTER_API_KEY_2 found, falling back to mock AIGovernanceAdvisor.")
+                ConsoleUI.warning("No GEMINI_API_KEY found, falling back to mock AIGovernanceAdvisor.")
                 self.use_mock = True
         else:
             try:

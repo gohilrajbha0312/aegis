@@ -41,11 +41,8 @@ class MutationStrategy(BaseModel):
 from pydantic_ai.models.openai import OpenAIModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
-openrouter_provider = OpenAIProvider(
-    base_url='https://openrouter.ai/api/v1',
-    api_key=os.getenv("OPENROUTER_API_KEY_2", "dummy")
-)
-model = OpenAIModel('deepseek/deepseek-v4-flash:free', provider=openrouter_provider)
+openrouter_provider = OpenAIProvider(base_url='https://openrouter.ai/api/v1', api_key=os.getenv("OPENROUTER_API_KEY", "dummy"))
+model = OpenAIModel(os.getenv('AEGIS_MODEL', ''), provider=openrouter_provider)
 
 payload_generator_ai = Agent(
     model,

@@ -18,6 +18,7 @@ if env_path.exists():
             line = line.strip()
             if line and not line.startswith('#'):
                 k, v = line.split('=', 1)
+                v = v.strip('"').strip("'")
                 os.environ[k] = v
                 if k.startswith('OPENROUTER_API_KEY'):
                     os.environ[k] = v
@@ -64,9 +65,17 @@ available_agents_text = (
     "LOW-NOISE REASONING SKILLS (Highly Preferred): 'AuthorizationReasoningSkill', 'AuthenticationReasoningSkill', "
     "'ClientSideReasoningSkill', 'APIIntelligenceSkill', 'SecurityConfigReasoningSkill', "
     "'DataExposureReasoningSkill', 'ErrorAnalysisReasoningSkill'.\n"
-    "LOW-NOISE AGENTS (Preferred): 'ReconAgent', 'TrafficAnalyzerAgent', 'JSIntelligenceAgent', "
+    "LOW-NOISE AGENTS (Preferred): 'ContinuousReconLoopAgent', 'ReconAgent', 'TrafficAnalyzerAgent', 'JSIntelligenceAgent', "
     "'APISurfaceAgent', 'SemanticDiscoveryAgent', 'AdaptiveValidationEngine', "
-    "'AuthAnalyzerAgent', 'ValidationAgent', 'LoginDetectionAgent', 'AttackGraphIntelligenceAgent'.\n"
+    "'AuthAnalyzerAgent', 'ValidationAgent', 'LoginDetectionAgent', 'AttackGraphIntelligenceAgent', "
+    "'EvidenceGraphAgent', 'SessionIsolationAgent', 'RouteOwnershipAgent', 'DifferentialResponseAgent', "
+    "'RuntimeMemoryAgent', 'ReconExpansionAgent', 'RouteRiskScoringAgent', "
+    "'RouteLineageAgent', 'ParameterLineageAgent', 'DiscoveryConfidenceAgent', 'AttackSurfaceGrowthAgent', 'ReconBudgetOptimizerAgent', "
+    "'SessionFingerprintAgent', 'APIBehaviorAgent', 'AttackPathCorrelationAgent', "
+    "'MultiSessionCorrelationAgent', 'ResponseFingerprintAgent', 'RuntimeAnomalyAgent', "
+    "'EvidenceTrustAgent', 'EvidenceConflictAgent', "
+    "'AttackPathExpansionAgent', 'AgentConsensusAgent', 'CampaignCompletionAgent', "
+    "'TokenAnalysisAgent', 'PriceManipulationAgent'.\n"
     "MEDIUM-NOISE (evidence required): 'WebCrawlerAgent', 'ActiveScanner', 'ExploitationAgent', 'ReportingAgent'.\n"
     "HIGH-NOISE (disabled unless DEEP_ANALYSIS): 'FuzzingAgent', 'HydraAdapter'.\n"
     "NEVER schedule high-noise agents without prior low-noise evidence.\n\n"
@@ -81,32 +90,15 @@ available_agents_text = (
     "8. Correlation\n"
     "9. Reporting\n\n"
     "EVIDENCE MANDATE: Do NOT generate hypotheses if there is no supporting evidence in the SAFE_STATE_SUMMARY. "
-    "If evidence_count == 0 (no routes, params, or sessions discovered), DO NOT schedule validation or reasoning agents. Instead, schedule Evidence Collection agents."
+    "If evidence_count == 0, DO NOT schedule validation or reasoning agents. Instead, schedule Evidence Collection agents.\n\n"
+    "SKILL 97 (ReconPersistence): Every finding MUST trigger additional route/parameter/session discovery. Never stop at the first vulnerability. Ensure ReconExpansionAgent is called frequently."
 )
 
 prompt_1 = master_prompt + "\n\nYOUR ROLE: RECONNAISSANCE & ROUTING EXPERT.\nYou specialize in scheduling ReconAgent, JSIntelligenceAgent, and APISurfaceAgent.\n" + available_agents_text
-provider_1 = OpenAIProvider(
-    base_url='https://openrouter.ai/api/v1',
-    api_key=os.getenv("OPENROUTER_API_KEY", "dummy")
-)
-model_1 = OpenAIModel('openai/gpt-oss-120b:free', provider=provider_1)
-ai_1 = Agent(model_1, output_type=DynamicPipeline, system_prompt=prompt_1)
-
 prompt_2 = master_prompt + "\n\nYOUR ROLE: VULNERABILITY DISCOVERY EXPERT.\nYou specialize in AI traffic manipulation and logic flaws. You MUST actively schedule TrafficAnalyzerAgent and SurgicalMutationAgent to hunt for Business Logic, XSS, and SQLi flaws.\n" + available_agents_text
-provider_2 = OpenAIProvider(
-    base_url='https://openrouter.ai/api/v1',
-    api_key=os.getenv("OPENROUTER_API_KEY_2", "dummy")
-)
-model_2 = OpenAIModel('deepseek/deepseek-v4-flash:free', provider=provider_2)
-ai_2 = Agent(model_2, output_type=DynamicPipeline, system_prompt=prompt_2)
-
 prompt_3 = master_prompt + "\n\nYOUR ROLE: VALIDATION & AUTHENTICATION EXPERT.\nYou specialize in reasoning skills and validation. Focus on AuthAnalyzerAgent and Reasoning Skills.\n" + available_agents_text
-provider_3 = OpenAIProvider(
-    base_url='https://openrouter.ai/api/v1',
-    api_key=os.getenv("OPENROUTER_API_KEY_3", "dummy")
-)
-model_3 = OpenAIModel('meta-llama/llama-3.3-70b-instruct:free', provider=provider_3)
-ai_3 = Agent(model_3, output_type=DynamicPipeline, system_prompt=prompt_3)
+
+# Agents are now built dynamically in the process method using the failover engine
 
 class CommanderAgent(BaseAgent):
     """
@@ -150,27 +142,23 @@ class CommanderAgent(BaseAgent):
         successful_methods = state.get("successful_methods", [])
         routes = state.get("routes", [])
         
-        safe_state = {
-            "target": target,
-            "current_phase": state.get("current_stage", "Unknown"),
-            "completed_agents": completed_agents[-10:] if len(completed_agents) > 10 else completed_agents,
-            "validated_findings": [f.get("title") for f in validated_findings][-5:],
-            "open_ports": state.get("open_ports", []),
-            "frameworks": state.get("frameworks", []),
-            "recent_routes": routes[-20:] if len(routes) > 20 else routes,
-            "sessions": state.get("sessions", []),
-            "roles": state.get("roles", []),
-            "parameters": state.get("parameters", [])[-20:] if len(state.get("parameters", [])) > 20 else state.get("parameters", []),
-            "forms": state.get("forms", [])[-10:] if len(state.get("forms", [])) > 10 else state.get("forms", []),
-            "failed_methods": failed_methods[-5:] if len(failed_methods) > 5 else failed_methods,
-            "successful_methods": successful_methods[-5:] if len(successful_methods) > 5 else successful_methods,
-            "next_candidate_actions": state.get("next_candidate_actions", []),
-            "workflow_depth": state.get("workflow_depth", 0),
-            "unavailable_agents": state.get("unavailable_agents", []),
-            "repeated_results_counter": state.get("repeated_results_counter", {}),
-            "attack_surface_nodes": state.get("attack_surface_nodes", [])[-20:],
-            "attack_paths": state.get("attack_paths", [])[-10:]
-        }
+        # SKILL 78: State Compression
+        from aegisx.agents.state_compression import StateCompressionAgent
+        safe_state = StateCompressionAgent.compress(state)
+        
+        # Merge in a few extra commander-specific fields
+        safe_state["current_phase"] = state.get("current_stage", "Unknown")
+        safe_state["completed_agents"] = completed_agents[-10:] if len(completed_agents) > 10 else completed_agents
+        safe_state["validated_findings"] = [f.get("title") for f in validated_findings][-5:]
+        safe_state["open_ports"] = state.get("open_ports", [])
+        safe_state["recent_routes"] = routes[-20:] if len(routes) > 20 else routes
+        
+        # SKILL 79: Recon Coverage Enforcement
+        from aegisx.agents.recon_coverage import ReconCoverageEnforcementAgent
+        disabled_agents = ReconCoverageEnforcementAgent.enforce(state)
+        if disabled_agents:
+            safe_state["unavailable_agents"] = list(set(safe_state.get("unavailable_agents", []) + disabled_agents))
+            prompt += "\n[!] RECON COVERAGE < 70%: Vulnerability/Exploitation validation is DISABLED. You MUST focus on ReconAgent, JSIntelligenceAgent, SessionAgent, etc.\n"
         
         prompt += "SAFE_STATE_SUMMARY (Compressed Context):\n"
         prompt += json.dumps(safe_state, indent=2)
@@ -186,70 +174,73 @@ class CommanderAgent(BaseAgent):
         max_retries = 3
         pipeline = None
         
+        from aegisx.agents.model_health import model_health_engine
+        
         for attempt in range(max_retries):
-            # Wrap all 3 AI calls in asyncio tasks
-            # Wait for all of them up to 60 seconds using gather
-            self.log_action("multi_ai_consensus_started", {
-                "models": ["gpt-oss-120b (Recon)", "deepseek-v4-flash (Vuln)", "llama-3.3-70b (Auth)"], 
+            # Dynamically build agent to respect failover state
+            ai_1 = model_health_engine.failover.build_agent(prompt_1, DynamicPipeline)
+            
+            self.log_action("single_ai_started", {
+                "models": [model_health_engine.failover.current_model_name], 
                 "attempt": attempt + 1
             })
             
             try:
-                task_1 = asyncio.create_task(ai_1.run(prompt))
-                await asyncio.sleep(1)
-                task_2 = asyncio.create_task(ai_2.run(prompt))
-                await asyncio.sleep(1)
-                task_3 = asyncio.create_task(ai_3.run(prompt))
-                
-                results = await asyncio.wait_for(
-                    asyncio.gather(task_1, task_2, task_3, return_exceptions=True),
-                    timeout=60.0
+                result = await asyncio.wait_for(
+                    ai_1.run(prompt),
+                    timeout=180.0
                 )
+                results = [result]
             except asyncio.TimeoutError:
-                self.log_action("ai_model_timeout", {"timeout": 60.0})
+                self.log_action("ai_model_timeout", {"timeout": 180.0})
                 ConsoleUI.warning("AI Commander consensus timed out.")
                 results = []
+            except Exception as e:
+                results = [e]
                 
             valid_pipelines = []
+            rate_limit_hit = False
             for res in results:
                 if not isinstance(res, Exception):
                     valid_pipelines.append(res.output)
                 else:
-                    self.log_action("ai_model_failed", {"error": str(res)})
+                    err_str = str(res)
+                    self.log_action("ai_model_failed", {"error": err_str})
+                    if "429" in err_str or "Rate limit" in err_str or "Quota" in err_str:
+                        rate_limit_hit = True
                     
-            # We allow degraded consensus to proceed if the free-tier models are rate-limited,
-            # because the master prompt still enforces the vulnerability agents globally.
             if valid_pipelines:
-                if len(valid_pipelines) < 3:
-                    ConsoleUI.warning(f"Consensus degraded! Only {len(valid_pipelines)}/3 experts responded (likely due to free-tier rate limits). Proceeding with available models.")
-                    
-                # Merge the valid pipelines into one super-pipeline!
                 base = valid_pipelines[0]
-                merged_actions = list(base.next_actions)
-                merged_reasoning = "CONSENSUS: " + base.reasoning
+                final_actions = base.next_actions
+                merged_reasoning = base.reasoning
                 is_complete = base.is_complete
-                
-                for p in valid_pipelines[1:]:
-                    # Merge unique actions
-                    for act in p.next_actions:
-                        if act.agent not in [a.agent for a in merged_actions]:
-                            merged_actions.append(act)
-                    merged_reasoning += " | " + p.reasoning
-                    # If ANY model says we aren't done, we keep going!
-                    if not p.is_complete:
-                        is_complete = False
-                        
-                base.next_actions = merged_actions
+
+                base.next_actions = final_actions
                 base.reasoning = merged_reasoning
                 base.is_complete = is_complete
                 pipeline = base
                 break # Success!
                 
             # If we reach here, all 3 models failed on this attempt
+            if rate_limit_hit and not valid_pipelines:
+                # SKILL 76/77: ModelHealthAgent Failover Trigger
+                can_retry = model_health_engine.handle_failure("OpenRouter Rate Limit (429)")
+                if not can_retry:
+                    ConsoleUI.error("OpenRouter API Quota Exhausted and model pool depleted. Fast-failing to deterministic fallback planner.")
+                    break
+                else:
+                    # Model swapped! Retry immediately on the new model without sleeping
+                    continue
+
             if attempt < max_retries - 1:
-                wait_time = (attempt + 1) * 15 # Wait 15s, then 30s
-                ConsoleUI.warning(f"AI Quota/Timeout hit. Retrying in {wait_time}s...")
-                await asyncio.sleep(wait_time)
+                # A generic error occurred, trigger health check
+                can_retry = model_health_engine.handle_failure(err_str if 'err_str' in locals() else "Unknown Error")
+                if can_retry:
+                    continue
+                else:
+                    wait_time = (attempt + 1) * 15 # Wait 15s, then 30s
+                    ConsoleUI.warning(f"AI Error ({err_str if 'err_str' in locals() else 'Unknown'}). Retrying in {wait_time}s...")
+                    await asyncio.sleep(wait_time)
                 
         if not pipeline:
             ConsoleUI.warning("Both AI Commanders failed completely. Engaging Fallback Planner.")
@@ -278,6 +269,15 @@ class CommanderAgent(BaseAgent):
         """
         completed = state.get("completed_agents", [])
         
+        # Fetch metrics for reporting gates
+        recon_score = state.get("recon_coverage_score", 0)
+        growth = state.get("attack_surface_growth_score", 0)
+        routes_discovered = len(state.get("routes", []))
+        routes_tested = len(state.get("tested_routes", []))
+        val_queue = len(state.get("validation_queue", []))
+
+        can_report = (recon_score >= 90) and (growth == 0) and (routes_tested >= routes_discovered) and (val_queue == 0)
+
         # Simple state machine based on what hasn't run yet
         if "ReconAgent" not in completed:
             next_action = "ReconAgent"
@@ -291,6 +291,21 @@ class CommanderAgent(BaseAgent):
         elif "APISurfaceAgent" not in completed:
             next_action = "APISurfaceAgent"
             phase = "Route Intelligence"
+        elif "GraphQLExpansionAgent" not in completed and any("graphql" in str(r).lower() for r in state.get("routes", [])):
+            next_action = "GraphQLExpansionAgent"
+            phase = "GraphQL Expansion"
+        elif "TokenAnalysisAgent" not in completed and any("eyJ" in str(s) for s in state.get("sessions", [])):
+            next_action = "TokenAnalysisAgent"
+            phase = "Token Analysis"
+        elif "PriceManipulationAgent" not in completed and any(kw in str(r).lower() for kw in ['checkout', 'cart', 'payment', 'order', 'pay'] for r in state.get("routes", [])):
+            next_action = "PriceManipulationAgent"
+            phase = "Business Logic Testing"
+        elif "SessionValidationAgent" not in completed and any(kw in str(r).lower() for kw in ['auth', 'login', 'admin', 'user', 'profile'] for r in state.get("routes", [])):
+            next_action = "SessionValidationAgent"
+            phase = "Session Validation"
+        elif "RouteCoverageAgent" not in completed:
+            next_action = "RouteCoverageAgent"
+            phase = "Coverage Analysis"
         elif "AuthenticationReasoningSkill" not in completed:
             next_action = "AuthenticationReasoningSkill"
             phase = "Authentication Analysis"
@@ -298,9 +313,12 @@ class CommanderAgent(BaseAgent):
             next_action = "ClientSideReasoningSkill"
             phase = "Vulnerability Discovery"
         else:
-            # Everything basic has run, just do reporting
-            next_action = "ReportingAgent"
-            phase = "Reporting"
+            if can_report:
+                next_action = "ReportingAgent"
+                phase = "Reporting"
+            else:
+                next_action = "ReconAgent"
+                phase = "Network Discovery (Forced Continue)"
             
         return DynamicPipeline(
             workflow_phase=phase,
